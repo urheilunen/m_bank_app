@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>М-Банк | Вход</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link rel="icon" href="/static/Assets/Icons/Favicon.svg" type="image/x-icon">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.cdnfonts.com/css/sf-pro-display" rel="stylesheet">
+                
+</head>
+<body>
+    <section class="main-container">
+        <div class="main-logo-wrapper">
+            <img src="/static/Assets/Icons/M-Bank_Logo.svg" alt="" class="main-logo">
+        </div>
+            <form method="post" class="form-wrapper">
+                {% if error %}
+                {{ error }}<br>
+                {% endif %}
+                <input type="text" name="username" placeholder="Ваше имя" class="reg-inputs" required>
+                <input type="text" name="secret_word" placeholder="Секретное слово" class="reg-inputs" required>
+                <p class="secret-word-caption">Придумайте секретное слово,<br> если входите в М-Банк первый раз</p>
+                <input type="submit" value="Войти" class="enter-button">
+                <a href="/info" class="information-link">Справка</a>
+            </form>
+            <div class="qr-code-wrapper">
+                <img src="{{ qrcode(base_url) }}">
+            </div>
+    </section>
+</body>
+</html>

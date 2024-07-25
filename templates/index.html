@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>М-Банк | Главная</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js""></script>
+    <link rel="icon" href="/static/Assets/Icons/Favicon.svg" type="image/x-icon">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.cdnfonts.com/css/sf-pro-display" rel="stylesheet">
+</head>
+<body>
+    <section class="game-page-wrapper">
+        <div class="game-screen-header">
+            <div class="game-logo-wrapper">
+                <img src="/static/Assets/Icons/M-Bank_Logo.svg" alt="" class="game-logo">
+            </div>
+            <p class="your-name">
+                Ваше имя: {{ user['name'] }}
+            </p>
+        </div>
+        <div class="balance-wrapper">
+            <p class="balance-caption">Ваш баланс:</p> 
+            <h1 class="balance-number">
+                ${{ user['balance'] }}
+            </h1>
+        </div>
+    </div>
+    <div class="players-list-wrapper">
+        <div class="players-list-header">
+            <p class="players-list-name">Список игроков</p>
+            <p class="players-number">0</p>
+        </div>
+        <ul class="players-list">
+            {% for player in users %}
+            <li class="player-in-list">
+                <p class="player-list-name">{{ player['name'] }}</p>
+                <p style="color: #ffffff; margin: 0;">...</p>
+                <p style="color: #ffffff; margin: 0;">...</p>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <button class="create-transaction-button"> <a href="#popup" style="text-decoration: none; color: #ffffff;">Создать транзакцию</a></button>
+    {% if user['bank_holder'] %}
+    {% endif %}
+    <div id="popup" class="popup-screen">
+        <form method="post" id="regularTransactionForm">
+            <p class="popup-title">Создать транзакцию</p>
+            <div class="popup-row">
+                <select id="receiverInput" name="receiver" class="popup-selecter">
+                    <option value="">--Кому--</option>
+                    <option value="bank">Банк</option>
+                    {% for receiver in users %}
+                    {% if receiver['name'] != user['name'] %}
+                    <option value="{{ receiver['name'] }}">{{ receiver['name'] }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+                <input type="number" placeholder="Сумма" name="amount" id="amountInput" class="popup-amount">
+            </div>
+            <div class="popup-row">
+                <input type="text" placeholder="Комментарий" name="comment" id="commentInput" class="popup-comment">
+                <input type="submit" value="OK" class="popup-button">
+            </div>
+        </form>
+        <a href="#" class="close">&times;</a> <!-- Кнопка для закрытия поп-ап блока -->
+    </div>
+    <div id="popup" class="popup-screen">
+        <form method="post" id="bankTransactionForm">
+            Создать транзакцию из банка (эту форму надо вывести в поп-ап)
+            <select id="receiverFromBankInput" name="receiver">
+                <option value="">--Кому--</option>
+                {% for receiver in receivers %}
+                <option value="{{ receiver }}">{{ receiver }}</option>
+                {% endfor %}
+            </select>
+            <input type="number" placeholder="Сумма" name="amount" id="amountBankInput">
+            <input type="text" placeholder="Комментарий" name="comment" id="commentBankInput">
+            <input type="submit" value="Подтвердить" href="#" class="close">
+        </form>
+    </div>
+    <div class="transactions-wrapper">
+        <p class="transactions-title">История транзакций</p>
+        <div class="transaction-types">
+            <button class="tr-bt my-transactions-button">Мои</button>
+            <button class="tr-bt bank-transactions-button">С банком</button>
+            <button class="tr-bt all-transactions-button">Все</button>
+        </div>
+        <div class="transactions-list">
+            <div id="user_transactions" class="transactions-content">
+                {% for transaction in user_transactions %}
+                <div class="transaction-block">
+                    <p class="tr-caption tr-num">{{ transaction['pk'] }}</p>
+                    <p class="tr-caption tr-time">{{ transaction['timestamp'] }}</p>
+                    <div class="tr-caption operation-and-comment">
+                        <p class="tr-caption tr-operation">{% if transaction['sender'] == user['name'] %}Вы{% elif transaction['sender'] == 'bank' %}Банк{% else %}{{ transaction['sender'] }}{% endif %} → {% if transaction['receiver'] == user['name'] %}Вы{% elif transaction['receiver'] == 'bank' %}Банк{% else %}{{ transaction['receiver'] }}{% endif %} ${{ transaction['amount'] }}</p>
+                        <p class="tr-comment">{% if transaction['comment'] %}{{ transaction['comment'] }}{% endif %}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div id="bank_transactions" class="transactions-content">
+                {% for transaction in bank_transactions %}
+                <div class="transaction-block">
+                    <p class="tr-caption tr-num">{{ transaction['pk'] }}</p>
+                    <p class="tr-caption tr-time">{{ transaction['timestamp'] }}</p>
+                    <div class="tr-caption operation-and-comment">
+                        <p class="tr-caption tr-operation">{% if transaction['sender'] == user['name'] %}Вы{% elif transaction['sender'] == 'bank' %}Банк{% else %}{{ transaction['sender'] }}{% endif %} → {% if transaction['receiver'] == user['name'] %}Вы{% elif transaction['receiver'] == 'bank' %}Банк{% else %}{{ transaction['receiver'] }}{% endif %} ${{ transaction['amount'] }}</p>
+                        <p class="tr-comment">{% if transaction['comment'] %}{{ transaction['comment'] }}{% endif %}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div id="all_transactions" class="transactions-content">
+                {% for transaction in all_transactions %}
+                <div class="transaction-block">
+                    <p class="tr-caption tr-num">{{ transaction['pk'] }}</p>
+                    <p class="tr-caption tr-time">{{ transaction['timestamp'] }}</p>
+                    <div class="tr-caption operation-and-comment">
+                        <p class="tr-caption tr-operation">{% if transaction['sender'] == user['name'] %}Вы{% elif transaction['sender'] == 'bank' %}Банк{% else %}{{ transaction['sender'] }}{% endif %} → {% if transaction['receiver'] == user['name'] %}Вы{% elif transaction['receiver'] == 'bank' %}Банк{% else %}{{ transaction['receiver'] }}{% endif %} ${{ transaction['amount'] }}</p>
+                        <p class="tr-comment">{% if transaction['comment'] %}{{ transaction['comment'] }}{% endif %}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+        <a href="/signout" class="exit-link">Выйти</a><br>
+        </section>
+    <script>
+        let currentUser = "{{ user['name'] }}";
+        $(document).ready(function() {
+            $('#user_transactions').show();
+            
+            $('.my-transactions-button').click(function() {
+                $('.transactions-content').hide();
+                $('#user_transactions').show();
+            });
+
+            $('.bank-transactions-button').click(function() {
+                $('.transactions-content').hide();
+                $('#bank_transactions').show();
+            });
+
+            $('.all-transactions-button').click(function() {
+                $('.transactions-content').hide();
+                $('#all_transactions').show();
+            });
+
+
+            $("#regularTransactionForm").submit(function(e) {
+                e.preventDefault();
+                if ($('#receiverInput').val() == '') {
+                    alert('Выберите получателя!');
+                    return false;
+                }
+                if ($('#amountInput').val() == '') {
+                    alert('Сумма перевода должна быть больше 0!');
+                    return false;
+                }
+                $.post('/create_transaction',
+                    {
+                        sender: "{{ user['name'] }}",
+                        receiver: $('#receiverInput').val(),
+                        amount: $('#amountInput').val(),
+                        comment: $('#commentInput').val(),
+                        ts: Date.now(),
+                    }, function(data) {
+                        console.log('Создана транзакция, pk=' + data['transaction_pk']);
+                        $('#receiverInput').val('');
+                        $('#amountInput').val('');
+                    });
+            });
+            $("#bankTransactionForm").submit(function(e) {
+                e.preventDefault();
+            });
+
+            function updateInfo() {
+                let intro = '';
+                let outro = '';
+                let comment = '';
+                let last_transaction = '';
+                let color = '';
+                $.get("/get_updates", {}, function(data) {
+                    console.log(data);
+                    $(".players-number").text(data['players_amount']);
+                    $(".balance-number").text('$' + data['balance']);
+                    // пройтись по всем новым транзакциям
+                    data['new_transactions'].forEach(function(transaction) {
+                        if (transaction.transaction_sender == currentUser) {
+                            intro = 'Вы';
+                        } else if (transaction.transaction_sender == 'bank') {
+                            intro = 'Банк'
+                        } else {
+                            intro = transaction.transaction_sender;
+                        }
+                        if (transaction.transaction_receiver == currentUser) {
+                            outro = 'Вам';
+                        } else if (transaction.transaction_receiver == 'bank') {
+                            outro = 'Банк'
+                        } else {
+                            outro = transaction.transaction_receiver;
+                        }
+                        comment = transaction.comment || '';
+                        var transactionBlock = `
+                            <div class="transaction-block">
+                                <p class="tr-caption tr-num">${transaction.transaction_pk}</p>
+                                <p class="tr-caption tr-time">${transaction.transaction_timestamp}</p>
+                                <div class="tr-caption operation-and-comment">
+                                    <p class="tr-caption tr-operation">${intro} → ${outro} $${transaction.transaction_amount
+}</p>
+                                    <p class="tr-comment">${transaction.transaction_comment}</p>
+                                </div>
+                            </div>
+                        `;
+                        if (transaction.notification_type == 'personal') {
+                            $('#user_transactions').prepend(transactionBlock);
+                        }
+                        if (transaction.notification_type == 'bank') {
+                            $('#bank_transactions').prepend(transactionBlock);
+                        }
+                        if (transaction.notification_type == 'all') {
+                            $('#all_transactions').prepend(transactionBlock);
+                        }
+                        $.post('/delete_notification', {ts: Date.now(), notification_pk: transaction.notification_pk})
+                    });
+                    // пройтись по всем полученным игрокам
+
+                    data['players'].forEach(function(player) {
+                        $('.player-in-list').each(function() {
+                            var nameElement = $(this).find('.player-list-name');
+                            if (nameElement.text() === player.name) {
+                                last_transaction = player.last_transaction;
+                                if (last_transaction.includes('+')) {
+                                    color = '#0c9';
+                                }
+                                if (last_transaction.includes('-')) {
+                                    color = '#c30';
+                                }
+                                $(this).find('p').eq(1).text('$' + player.balance);
+                                $(this).find('p').eq(2).text('$' + player.last_transaction);
+                                $(this).find('p').eq(2).css({'color': color});
+                            }
+                        });
+                    });
+                });
+            }
+
+            setInterval(updateInfo, 1000);
+        });
+
+</script>
+</body>
+</html>
