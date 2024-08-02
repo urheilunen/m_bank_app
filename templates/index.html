@@ -70,21 +70,19 @@
         <a href="#popup1" style="text-decoration: none; color: #ffffff;"><button class="create-transaction-button"> Создать транзакцию из банка</button></a>
     {% endif %}
     <div id="popup1" class="popup-screen">
-        <form method="post" id="">
+        <form method="post" id="bankTransactionForm">
             <p class="popup-title">Создать транзакцию из банка</p>
             <div class="popup-row">
                 <select id="receiverFromBankInput" name="receiver" class="popup-selecter">
                     <option value="">Получатель</option>
                     {% for receiver in users %}
-                    {% if receiver['name'] != user['name'] %}
-                    <option value="{{ receiver['name'] }}">{{ receiver['name'] }}</option>
-                    {% endif %}
+                        <option value="{{ receiver['name'] }}">{{ receiver['name'] }}</option>
                     {% endfor %}
                 </select>
-                <input type="number" placeholder="Сумма" name="amount" id="amountBankInput" class="popup-amount">
+                <input type="number" placeholder="Сумма" name="amount" id="amountFromBankInput" class="popup-amount">
             </div>
             <div class="popup-row">
-                <input type="text" placeholder="Комментарий" name="comment" id="commentBankInput" class="popup-comment">
+                <input type="text" placeholder="Комментарий" name="comment" id="commentFromBankInput" class="popup-comment">
                 <input type="submit" value="OK" class="popup-button">
             </div>
         </form>
@@ -158,34 +156,6 @@
             $('.all-transactions-button').click(function () {
                 $('.transactions-content').hide();
                 $('#all_transactions').show();
-            });
-
-
-            $("#regularTransactionForm").submit(function (e) {
-                e.preventDefault();
-                if ($('#receiverInput').val() == '') {
-                    alert('Выберите получателя!');
-                    return false;
-                }
-                if ($('#amountInput').val() == '') {
-                    alert('Сумма перевода должна быть больше 0!');
-                    return false;
-                }
-                $.post('/create_transaction',
-                    {
-                        sender: "{{ user['name'] }}",
-                        receiver: $('#receiverInput').val(),
-                        amount: $('#amountInput').val(),
-                        comment: $('#commentInput').val(),
-                        ts: Date.now(),
-                    }, function (data) {
-                        console.log('Создана транзакция, pk=' + data['transaction_pk']);
-                        $('#receiverInput').val('');
-                        $('#amountInput').val('');
-                    });
-            });
-            $("#bankTransactionForm").submit(function (e) {
-                e.preventDefault();
             });
 
             function updateInfo() {
@@ -264,30 +234,39 @@
 
 
         $(document).ready(function () {
-            // Закрытие попапа при нажатии на крестик
             $('.close', '.popup-button').click(function (e) {
                 e.preventDefault();
-                window.location.hash = ''; // Сбрасываем хэш, чтобы скрыть попап
+                window.location.hash = '';
             });
-
-            
-            // Закрытие попапа при нажатии на кнопку ОК
             $('#regularTransactionForm').submit(function (e) {
-                e.preventDefault(); // Предотвращаем отправку формы для демонстрации
-                window.location.hash = ''; // Сбрасываем хэш, чтобы скрыть попап
-
-                // Здесь вы можете добавить код для обработки данных формы
-                // Например, отправить данные на сервер через AJAX
-                $.post('/create_transaction', {
+                e.preventDefault();
+                window.location.hash = '';
+                    $.post('/create_transaction', {
                     sender: "{{ user['name'] }}",
                     receiver: $('#receiverInput').val(),
                     amount: $('#amountInput').val(),
+                    comment: $('#commentInput').val(),
                     ts: Date.now(),
                 }, function (data) {
                     console.log('Создана транзакция, pk=' + data['transaction_pk']);
                     $('#receiverInput').val('');
                     $('#amountInput').val('');
                     $('#commentInput').val('');
+                });
+            });
+            $('#bankTransactionForm').submit(function (e) {
+                e.preventDefault();
+                window.location.hash = '';
+                $.post('/create_transaction', {
+                    receiver: $('#receiverFromBankInput').val(),
+                    amount: $('#amountFromBankInput').val(),
+                    comment: $('#commentFromBankInput').val(),
+                    ts: Date.now(),
+                }, function (data) {
+                    console.log('Создана транзакция из банка, pk=' + data['transaction_pk']);
+                    $('#receiverFromBankInput').val('');
+                    $('#amountFromBankInput').val('');
+                    $('#commentFromBankInput').val('');
                 });
             });
         });
