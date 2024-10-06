@@ -258,6 +258,7 @@
                 e.preventDefault();
                 window.location.hash = '';
                 $.post('/create_transaction', {
+                    sender: 'bank',
                     receiver: $('#receiverFromBankInput').val(),
                     amount: $('#amountFromBankInput').val(),
                     comment: $('#commentFromBankInput').val(),

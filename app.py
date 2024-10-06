@@ -10,10 +10,11 @@ app = Flask(__name__)
 QRcode(app)
 app.secret_key = 'mUYkyAdCYtQ5a2z4w7hYH1Ibq7R8ksZlHsEhvcoU7tbVTpxpEVKfClbAGFkR846l'
 DATABASE = 'monopoly_cashier.db'
+DB_LOCKED = False
 
 
 def init_db():
-    conn = sqlite3.connect(DATABASE)
+    conn = sqlite3.connect(DATABASE, timeout=5)
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
@@ -48,22 +49,32 @@ def init_db():
 
 
 def query_get_from_db(query, args=(), one=False):
-    conn = sqlite3.connect(DATABASE)
+    global DB_LOCKED
+    while DB_LOCKED:
+        time.sleep(0.2)
+    DB_LOCKED = True
+    conn = sqlite3.connect(DATABASE, timeout=5)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute(query, args)
     rv = cursor.fetchall()
     conn.close()
+    DB_LOCKED = False
     return (rv[0] if rv else None) if one else [dict(row) for row in rv]
 
 
 def query_update_db(query, args=(), one=False):
-    conn = sqlite3.connect(DATABASE)
+    global DB_LOCKED
+    while DB_LOCKED:
+        time.sleep(0.2)
+    DB_LOCKED = True
+    conn = sqlite3.connect(DATABASE, timeout=5)
     cursor = conn.cursor()
     cursor.execute(query, args)
     conn.commit()
     last_id = cursor.lastrowid
     conn.close()
+    DB_LOCKED = False
     return last_id
 
 
