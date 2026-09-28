@@ -5,12 +5,13 @@ from flask_qrcode import QRcode
 import socket
 import time
 import sqlite3
+from contextlib import closing
+from waitress import serve
 
 app = Flask(__name__)
 QRcode(app)
 app.secret_key = 'mUYkyAdCYtQ5a2z4w7hYH1Ibq7R8ksZlHsEhvcoU7tbVTpxpEVKfClbAGFkR846l'
 DATABASE = 'monopoly_cashier.db'
-DB_LOCKED = False
 
 
 def init_db():
@@ -49,33 +50,17 @@ def init_db():
 
 
 def query_get_from_db(query, args=(), one=False):
-    global DB_LOCKED
-    while DB_LOCKED:
-        time.sleep(0.2)
-    DB_LOCKED = True
-    conn = sqlite3.connect(DATABASE, timeout=5)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute(query, args)
-    rv = cursor.fetchall()
-    conn.close()
-    DB_LOCKED = False
+    with closing(sqlite3.connect(DATABASE, timeout=5)) as conn:
+        conn.row_factory = sqlite3.Row
+        rv = conn.execute(query, args).fetchall()
     return (rv[0] if rv else None) if one else [dict(row) for row in rv]
 
 
 def query_update_db(query, args=(), one=False):
-    global DB_LOCKED
-    while DB_LOCKED:
-        time.sleep(0.2)
-    DB_LOCKED = True
-    conn = sqlite3.connect(DATABASE, timeout=5)
-    cursor = conn.cursor()
-    cursor.execute(query, args)
-    conn.commit()
-    last_id = cursor.lastrowid
-    conn.close()
-    DB_LOCKED = False
-    return last_id
+    with closing(sqlite3.connect(DATABASE, timeout=5)) as conn:
+        with conn:
+            cursor = conn.execute(query, args)
+            return cursor.lastrowid
 
 
 def get_local_ip():
@@ -255,11 +240,29 @@ def get_updates():
         return abort(401)
 
 
+@app.route('/delete_notifications', methods=['POST'])
+def delete_notifications():
+    if 'username' not in session:
+        abort(401)
+    payload = request.get_json(silent=True)
+    ids = payload.get('notification_pks') if isinstance(payload, dict) else None
+    if not isinstance(ids, list) or any(type(pk) is not int or pk <= 0 for pk in ids):
+        abort(400)
+    # Bound SQLite parameter counts even after a long disconnection.
+    for offset in range(0, len(ids), 500):
+        batch = ids[offset:offset + 500]
+        placeholders = ','.join('?' for _ in batch)
+        query_update_db(
+            f'DELETE FROM notifications WHERE target_user=? AND pk IN ({placeholders})',
+            (session['username'], *batch))
+    return jsonify(status='success')
+
+
 @app.route('/delete_notification', methods=['POST'])
 def delete_notification():
     if 'username' in session:
         notification_pk = request.form.get('notification_pk')
-        query_update_db('DELETE FROM notifications WHERE pk=?', (notification_pk,))
+        query_update_db('DELETE FROM notifications WHERE pk=? AND target_user=?', (notification_pk, session['username']))
         return jsonify(
             {
                 'status': 'success'
@@ -271,5 +274,4 @@ def delete_notification():
 
 if __name__ == '__main__':
     init_db()
-    app.run(host='0.0.0.0', port=80, debug=True)
-    # app.run(debug=True)
+    serve(app, host='0.0.0.0', port=80, threads=8)

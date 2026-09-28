@@ -443,4 +443,25 @@ body{
 }
 .link-to-mainpage{
     color: #CDCEE2;
-}
+}/* Recipient cards and amount controls */
+.players-list-wrapper { height: auto; min-height: 300px; }
+.players-hint { color: #CDCEE2; font-size: 24pt; margin: 0 20px; }
+.players-list { flex-direction: row; }
+.player-in-list { padding: 0; flex-shrink: 0; }
+.player-transfer { font: inherit; color: inherit; background: transparent; border: 0; border-radius: 10px; padding: 16px; min-width: 200px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+.player-transfer:hover:not(:disabled), .player-transfer:focus-visible { background: #253b83; outline: 3px solid #6984ff; }
+.player-transfer:disabled { cursor: default; }
+.player-balance, .player-last-transaction { color: #fff; }
+.bank-icon { width: 64px; height: 64px; color: #8ba1ff; margin-bottom: 8px; }
+.popup-screen { z-index: 10; overflow-y: auto; }
+.popup-screen form { height: auto; padding: 30px 20px; max-height: 85vh; overflow-y: auto; }
+.popup-recipient { width: 400px; color: #CDCEE2; background: #14142C; border-radius: 15px; display: flex; flex-direction: column; justify-content: center; text-align: left; padding: 0 20px; box-sizing: border-box; overflow-wrap: anywhere; }
+.popup-recipient span { font-size: 20pt; }
+.popup-recipient strong { font-size: 28pt; }
+.popup-amount[readonly] { text-align: center; text-decoration: none; font-size: 40pt; }
+.amount-hint { color: #CDCEE2; font-size: 22pt; margin: 16px 0 0; }
+.amount-controls { width: 780px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
+.amount-step { min-height: 90px; border: 0; border-radius: 15px; background: #304EE7; color: white; font: inherit; font-size: 30pt; cursor: pointer; touch-action: manipulation; }
+.amount-step:disabled, .popup-button:disabled { opacity: .35; cursor: default; }
+.amount-step:focus-visible { outline: 3px solid white; }
+.game-page-wrapper { height: auto; gap: 30px; }
