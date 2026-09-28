@@ -79,6 +79,21 @@
     {% if user['bank_holder'] %}
         <a href="#popup1" style="text-decoration: none; color: #ffffff;"><button class="create-transaction-button"> Создать транзакцию из банка</button></a>
     {% endif %}
+
+    <div class="lap-section">
+        <button type="button" id="requestLap" class="create-transaction-button" disabled>Пройден круг · +200</button>
+        <p id="lapStatus" role="status">Загрузка статуса…</p>
+        {% if user['bank_holder'] %}
+        <button type="button" id="showLapRequests" hidden>Заявки на круг</button>
+        <dialog id="lapDialog" aria-labelledby="lapDialogTitle">
+            <h2 id="lapDialogTitle">Подтверждение круга</h2>
+            <div id="lapQueue"></div>
+            <p id="lapDecisionStatus" role="status"></p>
+            <button type="button" id="closeLapDialog">Посмотреть позже</button>
+        </dialog>
+        {% endif %}
+    </div>
+    
     <div id="popup1" class="popup-screen">
         <form method="post" id="bankTransactionForm">
             <p class="popup-title">Создать транзакцию из банка</p>
@@ -224,6 +239,7 @@
                     }
                 });
                 syncPlayers(data.players);
+                renderLapState(data.laps);
                 const ids = data.new_transactions.map(item => item.notification_pk);
                 if (ids.length) {
                     await api('/delete_notifications', {
@@ -240,5 +256,6 @@
 
     </script>
     <script src="/static/transfers.js"></script>
+    <script src="/static/laps.js"></script>
     </body>
 </html>

@@ -45,6 +45,16 @@ def init_db():
             type TEXT NOT NULL
         )
     ''')
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS lap_requests (
+            pk INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            transaction_pk INTEGER,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS one_pending_lap ON lap_requests(username) WHERE status='pending'")
     conn.commit()
     conn.close()
 
@@ -79,8 +89,7 @@ def get_local_ip():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if 'username' in session:
-        username = session['username']
-        return render_template('index.html', username=username)
+        return redirect(url_for('index'))
     else:
         base_url = 'http://' + get_local_ip()
         if request.method == 'POST':
@@ -151,7 +160,12 @@ def info():
 @app.route('/create_transaction', methods=['POST'])
 def create_transaction():
     if 'username' in session:
+        actor = query_get_from_db('SELECT bank_holder FROM users WHERE name=?', (session['username'],), one=True)
+        if actor is None:
+            abort(401)
         sender = request.form.get('sender')
+        if sender != session['username'] and not (sender == 'bank' and actor['bank_holder']):
+            abort(403)
         receiver = request.form.get('receiver')
         amount = request.form.get('amount')
         comment = request.form.get('comment')
@@ -207,6 +221,77 @@ def create_transaction():
         return abort(401)
 
 
+def lap_state(username):
+    own = query_get_from_db('SELECT * FROM lap_requests WHERE username=? ORDER BY pk DESC LIMIT 1', (username,))
+    banker = query_get_from_db('SELECT bank_holder FROM users WHERE name=?', (username,), one=True)
+    pending = query_get_from_db("SELECT * FROM lap_requests WHERE status='pending' ORDER BY pk") if banker and banker['bank_holder'] else []
+    return {'own': own[0] if own else None, 'pending': pending}
+
+
+@app.post('/lap_requests')
+def request_lap():
+    username = session.get('username')
+    if not username:
+        abort(401)
+    payload = request.get_json(silent=True)
+    previous = payload.get('previous_id') if isinstance(payload, dict) else None
+    if type(previous) is not int or previous < 0:
+        abort(400)
+    with closing(sqlite3.connect(DATABASE, timeout=5)) as conn:
+        conn.row_factory = sqlite3.Row
+        with conn:
+            conn.execute('BEGIN IMMEDIATE')
+            if not conn.execute('SELECT 1 FROM users WHERE name=?', (username,)).fetchone():
+                abort(401)
+            latest = conn.execute('SELECT * FROM lap_requests WHERE username=? ORDER BY pk DESC LIMIT 1', (username,)).fetchone()
+            # Compare the last observed request: retries cannot create another lap,
+            # even if the banker already processed the original request.
+            if (latest and latest['status'] == 'pending') or previous != (latest['pk'] if latest else 0):
+                return jsonify(request=dict(latest) if latest else None)
+            pk = conn.execute('INSERT INTO lap_requests (username) VALUES (?)', (username,)).lastrowid
+            row = conn.execute('SELECT * FROM lap_requests WHERE pk=?', (pk,)).fetchone()
+    return jsonify(request=dict(row))
+
+
+@app.post('/lap_requests/<int:pk>/decision')
+def decide_lap(pk):
+    username = session.get('username')
+    if not username:
+        abort(401)
+    payload = request.get_json(silent=True)
+    decision = payload.get('decision') if isinstance(payload, dict) else None
+    if decision not in ('approved', 'rejected'):
+        abort(400)
+    with closing(sqlite3.connect(DATABASE, timeout=5)) as conn:
+        conn.row_factory = sqlite3.Row
+        with conn:
+            conn.execute('BEGIN IMMEDIATE')
+            banker = conn.execute('SELECT bank_holder FROM users WHERE name=?', (username,)).fetchone()
+            if not banker or not banker['bank_holder']:
+                abort(403)
+            lap = conn.execute('SELECT * FROM lap_requests WHERE pk=?', (pk,)).fetchone()
+            if lap is None:
+                abort(404)
+            if lap['status'] != 'pending':
+                return jsonify(request=dict(lap))
+            transaction_pk = None
+            if decision == 'approved':
+                recipient = lap['username']
+                if not conn.execute('SELECT 1 FROM users WHERE name=?', (recipient,)).fetchone():
+                    abort(409)
+                transaction_pk = conn.execute(
+                    'INSERT INTO transactions (sender, receiver, amount, timestamp, comment) VALUES (?, ?, ?, ?, ?)',
+                    ('bank', recipient, 200, datetime.now().strftime('%H:%M:%S'), 'Пройден круг')).lastrowid
+                conn.execute('UPDATE users SET balance=balance+200, last_transaction=? WHERE name=?', ('+200', recipient))
+                notifications = [(transaction_pk, recipient, 'personal')]
+                for user in conn.execute('SELECT name FROM users').fetchall():
+                    notifications.extend([(transaction_pk, user['name'], 'all'), (transaction_pk, user['name'], 'bank')])
+                conn.executemany('INSERT INTO notifications (transaction_pk, target_user, type) VALUES (?, ?, ?)', notifications)
+            conn.execute('UPDATE lap_requests SET status=?, transaction_pk=? WHERE pk=?', (decision, transaction_pk, pk))
+            row = conn.execute('SELECT * FROM lap_requests WHERE pk=?', (pk,)).fetchone()
+    return jsonify(request=dict(row))
+
+
 @app.route('/get_updates', methods=['GET'])
 def get_updates():
     if 'username' in session:
@@ -223,7 +308,7 @@ def get_updates():
         )
         # получить инфу об игроках
         players_amount = query_get_from_db("SELECT COUNT(*) as players_amount FROM users")[0]['players_amount']
-        players = query_get_from_db("SELECT * FROM users")
+        players = query_get_from_db("SELECT name, balance, last_transaction FROM users")
 
         # получить текущий баланс юзера
         balance = query_get_from_db('SELECT balance FROM users WHERE name=?', (username,))[0]['balance']
@@ -234,6 +319,7 @@ def get_updates():
                 'balance': balance,
                 'players_amount': players_amount,
                 'players': players,
+                'laps': lap_state(username),
             }
         )
     else:

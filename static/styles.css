@@ -465,3 +465,16 @@ body{
 .amount-step:disabled, .popup-button:disabled { opacity: .35; cursor: default; }
 .amount-step:focus-visible { outline: 3px solid white; }
 .game-page-wrapper { height: auto; gap: 30px; }
+.lap-section { width: 870px; color: #CDCEE2; }
+#lapStatus { font-size: 25pt; margin: 15px 0 0; }
+#requestLap:disabled { opacity: .55; cursor: default; }
+#lapDialog { box-sizing: border-box; width: 870px; max-width: 94vw; max-height: 85vh; overflow-y: auto; background: #1d1d2b; color: #fff; border: 2px solid #6984ff; border-radius: 20px; padding: 30px; font-size: 28pt; }
+#lapDialog::backdrop { background: rgba(0, 0, 0, .75); }
+#lapDialog h2 { font-size: 34pt; margin-top: 0; }
+.lap-request { padding: 20px 0; border-bottom: 1px solid #454563; overflow-wrap: anywhere; }
+.lap-request p { margin-top: 0; }
+#lapDialog button, #showLapRequests { font: inherit; font-size: 26pt; padding: 20px; margin: 10px 10px 0 0; border: 0; border-radius: 12px; background: #304EE7; color: #fff; cursor: pointer; }
+#lapDialog .approved { background: #187644; }
+#lapDialog .rejected { background: #943737; }
+#lapDialog button:disabled { opacity: .5; cursor: default; }
+#lapDecisionStatus { font-size: 23pt; }
