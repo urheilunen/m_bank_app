@@ -7,6 +7,7 @@ import time
 import sqlite3
 from contextlib import closing
 from waitress import serve
+from werkzeug.exceptions import HTTPException
 
 app = Flask(__name__)
 QRcode(app)
@@ -157,68 +158,68 @@ def info():
     return render_template('info.html')
 
 
+def action_rejected(message, status=400):
+    return jsonify(result='fail', outcome='not_applied', error=message), status
+
+
+@app.errorhandler(HTTPException)
+def action_http_error(error):
+    # These explicit rejections happen before changes or roll back their transaction.
+    if request.endpoint in {'create_transaction', 'request_lap', 'decide_lap'} and error.code in {400, 401, 403, 404, 409}:
+        messages = {
+            400: 'Проверьте данные и попробуйте ещё раз.',
+            401: 'Войдите в игру заново.',
+            403: 'У вас нет прав на это действие.',
+            404: 'Заявка не найдена. Обновите страницу.',
+            409: 'Данные игры изменились. Обновите страницу и попробуйте ещё раз.'
+        }
+        return action_rejected(messages[error.code], error.code)
+    return error
+
+
 @app.route('/create_transaction', methods=['POST'])
 def create_transaction():
-    if 'username' in session:
-        actor = query_get_from_db('SELECT bank_holder FROM users WHERE name=?', (session['username'],), one=True)
-        if actor is None:
-            abort(401)
-        sender = request.form.get('sender')
-        if sender != session['username'] and not (sender == 'bank' and actor['bank_holder']):
-            abort(403)
-        receiver = request.form.get('receiver')
-        amount = request.form.get('amount')
-        comment = request.form.get('comment')
-        timestamp = time.time()
-
-        # создать транзакцию
-        transaction_pk = query_update_db(
-            'INSERT INTO transactions (sender, receiver, amount, timestamp, comment) VALUES (?, ?, ?, ?, ?)',
-            (sender, receiver, amount, datetime.fromtimestamp(timestamp).strftime('%H:%M:%S'), comment)
-        )
-
-        # записать последнюю транзакцию каждому юзеру
-        query_update_db('UPDATE users SET last_transaction=? WHERE name=?', ('-' + amount, sender))
-        query_update_db('UPDATE users SET last_transaction=? WHERE name=?', ('+' + amount, receiver))
-
-        # подсчитать баланс, но сначала проверить хватает ли денег у отправителя (если это не банк конечно)
-        if sender != 'bank':
-            sender_balance = query_get_from_db('SELECT balance FROM users WHERE name=?', (sender,))[0]['balance']
-            if int(sender_balance) < int(amount):
-                return jsonify({'result': 'fail', 'error': 'Недостаточно средств!'})
-        query_update_db('UPDATE users SET balance=balance - ? WHERE name=?', (amount, sender))
-        query_update_db('UPDATE users SET balance=balance + ? WHERE name=?', (amount, receiver))
-
-        # создать необходимые уведомления сначала для получателя и отправителя (если не являются банком)
-        if receiver != 'bank':
-            query_update_db(
-                'INSERT INTO notifications (transaction_pk, target_user, type) VALUES (?, ?, ?)',
-                (transaction_pk, receiver, 'personal')
-            )
-        if receiver != 'bank':
-            query_update_db(
-                'INSERT INTO notifications (transaction_pk, target_user, type) VALUES (?, ?, ?)',
-                (transaction_pk, sender, 'personal')
-            )
-
-        # создать общие уведомления для каждого юзера
-        all_users = query_get_from_db('SELECT name FROM users')
-        for i_user in all_users:
-            query_update_db(
-                'INSERT INTO notifications (transaction_pk, target_user, type) VALUES (?, ?, ?)',
-                (transaction_pk, i_user['name'], 'all')
-            )
-            # если транзакция банковская, создать банковское уведомление
-            if receiver == 'bank' or sender == 'bank':
-                query_update_db(
-                    'INSERT INTO notifications (transaction_pk, target_user, type) VALUES (?, ?, ?)',
-                    (transaction_pk, i_user['name'], 'bank')
-                )
-        return jsonify(
-            {'result': 'success', 'transaction_pk': transaction_pk}
-        )
-    else:
-        return abort(401)
+    username = session.get('username')
+    if not username:
+        abort(401)
+    sender = request.form.get('sender')
+    receiver = request.form.get('receiver')
+    try:
+        amount = int(request.form.get('amount', ''))
+    except (ValueError, TypeError):
+        return action_rejected('Укажите целую положительную сумму.')
+    if amount <= 0 or amount > 9007199254740991:
+        return action_rejected('Укажите целую положительную сумму допустимого размера.')
+    if not receiver or sender == receiver:
+        return action_rejected('Выберите другого игрока или банк.')
+    with closing(sqlite3.connect(DATABASE, timeout=5)) as conn:
+        conn.row_factory = sqlite3.Row
+        with conn:
+            conn.execute('BEGIN IMMEDIATE')
+            actor = conn.execute('SELECT * FROM users WHERE name=?', (username,)).fetchone()
+            if actor is None:
+                abort(401)
+            if sender != username and not (sender == 'bank' and actor['bank_holder']):
+                abort(403)
+            if receiver != 'bank' and not conn.execute('SELECT 1 FROM users WHERE name=?', (receiver,)).fetchone():
+                return action_rejected('Получатель не найден. Обновите список игроков.')
+            if sender != 'bank' and actor['balance'] < amount:
+                return action_rejected('Недостаточно средств. Проверьте сумму и попробуйте ещё раз.')
+            transaction_pk = conn.execute(
+                'INSERT INTO transactions (sender, receiver, amount, timestamp, comment) VALUES (?, ?, ?, ?, ?)',
+                (sender, receiver, amount, datetime.now().strftime('%H:%M:%S'), request.form.get('comment'))).lastrowid
+            conn.execute('UPDATE users SET balance=balance-?, last_transaction=? WHERE name=?', (amount, '-' + str(amount), sender))
+            conn.execute('UPDATE users SET balance=balance+?, last_transaction=? WHERE name=?', (amount, '+' + str(amount), receiver))
+            notifications = []
+            for name in (sender, receiver):
+                if name != 'bank':
+                    notifications.append((transaction_pk, name, 'personal'))
+            for user in conn.execute('SELECT name FROM users').fetchall():
+                notifications.append((transaction_pk, user['name'], 'all'))
+                if 'bank' in (sender, receiver):
+                    notifications.append((transaction_pk, user['name'], 'bank'))
+            conn.executemany('INSERT INTO notifications (transaction_pk, target_user, type) VALUES (?, ?, ?)', notifications)
+    return jsonify(result='success', transaction_pk=transaction_pk)
 
 
 def lap_state(username):

@@ -69,9 +69,7 @@ async function lapPost(url, payload) {
             method: 'POST', signal: controller.signal,
             headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
         });
-        if (response.status === 401) location.assign('/signup');
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        return await response.json();
+        return await readActionResponse(response);
     } finally {
         clearTimeout(timer);
     }
@@ -85,12 +83,14 @@ async function decideLap(pk, decision) {
     status.textContent = 'Сохраняем решение…';
     try {
         const result = await lapPost('/lap_requests/' + pk + '/decision', {decision});
+        notifications.dismiss('action');
         decidedLaps.add(pk);
         lapQueue = lapQueue.filter(item => item.pk !== pk);
         if (result.request.username === currentUser) mergeOwnLap(result.request);
         status.textContent = result.request.status === 'approved' ? 'Начислено 200.' : 'Заявка отклонена.';
     } catch (error) {
-        status.textContent = 'Нет ответа. Можно повторить решение: повторного начисления не будет.';
+        status.textContent = error.notApplied ? error.message : 'Нет ответа. Можно повторить решение: повторного начисления не будет.';
+        notifyActionError(error, 'Решение не сохранено', 'Не удалось узнать результат подтверждения. Статус обновится при восстановлении связи.');
     } finally {
         decidingLap = false;
         document.querySelectorAll('#lapQueue button').forEach(button => button.disabled = false);
@@ -107,9 +107,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderLapState({own: ownLap, pending: lapQueue});
         try {
             const result = await lapPost('/lap_requests', {previous_id: previous});
+            notifications.dismiss('action');
             mergeOwnLap(result.request);
         } catch (error) {
-            lapError = 'Не удалось получить ответ. Статус обновится при восстановлении связи.';
+            lapError = error.notApplied ? error.message : 'Не удалось получить ответ. Статус обновится при восстановлении связи.';
+            notifyActionError(error, 'Заявка не отправлена', 'Не удалось узнать статус заявки. Дождитесь восстановления связи.');
         } finally {
             requestingLap = false;
             renderLapState({own: ownLap, pending: lapQueue});

@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>М-Банк | Главная</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="/static/polling.js"></script>
+    <script src="/static/notifications.js"></script>
+    <script src="/static/polling.js?v=connection-1"></script>
     <link rel=" icon" href="/static/Assets/Icons/Favicon.svg" type="image/x-icon">
-    <link rel="stylesheet" href="/static/styles.css">
-    <link href="https://fonts.cdnfonts.com/css/sf-pro-display" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css?v=notifications-1">
 </head>
 <body>
     <section class="game-page-wrapper">
@@ -17,7 +18,7 @@
                 <img src="/static/Assets/Icons/M-Bank_Logo.svg" alt="" class="game-logo">
             </div>
             <p class="your-name">
-                Ваше имя: {{ user['name'] }}
+                {{ user['name'] }}
             </p>
         </div>
         <div class="balance-wrapper">
@@ -28,10 +29,10 @@
         </div>
     <div class="players-list-wrapper">
         <div class="players-list-header">
-            <p class="players-list-name">Список игроков</p>
+            <p class="players-list-name">Кому перевести</p>
             <p class="players-number">0</p>
         </div>
-        <p class="players-hint">Нажмите на игрока или банк, чтобы перевести деньги</p>
+        <p class="players-hint">Выберите получателя · листайте список</p>
         <ul class="players-list">
             <li class="player-in-list bank-in-list">
                 <button type="button" class="player-transfer" data-receiver="bank" aria-label="Перевести банку">
@@ -43,7 +44,7 @@
             </li>
             {% for player in users %}
             <li class="player-in-list">
-                <button type="button" class="player-transfer" data-receiver="{{ player['name'] }}"
+                <button type="button" class="player-transfer" title="{{ player['name'] }}" data-receiver="{{ player['name'] }}"
                     {% if player['name'] == user['name'] %}disabled aria-label="Ваш счёт"{% endif %}>
                     <span class="player-list-name">{{ player['name'] }}</span>
                     <span class="player-balance">...</span>
@@ -54,9 +55,9 @@
         </ul>
     </div>
                                                 <!-- СОЗДАНИЕ ОБЫЧНОЙ ТРАНЗАКЦИИ  -->
-    <div id="popup" class="popup-screen">
+    <div id="popup" class="popup-screen" role="dialog" aria-modal="true" aria-labelledby="transferTitle">
         <form method="post" id="regularTransactionForm">
-            <p class="popup-title">Создать транзакцию</p>
+            <div class="popup-header"><h2 class="popup-title" id="transferTitle">Перевод игроку</h2><a href="#" class="close" aria-label="Закрыть перевод">&times;</a></div>
             <div class="popup-row">
                 <div class="popup-recipient"><span>Получатель</span><strong id="receiverName">—</strong></div>
                 <input type="hidden" id="receiverInput" name="receiver">
@@ -69,18 +70,16 @@
                 {% endfor %}
             </div>
             <div class="popup-row">
-                <input type="text" placeholder="Комментарий" name="comment" id="commentInput" class="popup-comment">
-                <input type="submit" value="OK" class="popup-button">
+                <input type="text" placeholder="Комментарий (необязательно)" aria-label="Комментарий" name="comment" id="commentInput" class="popup-comment">
+                <input type="submit" value="Перевести" class="popup-button">
             </div>
         </form>
-        <a href="#" class="close">&times;</a> <!-- Кнопка для закрытия поп-ап блока -->
     </div>
                                                 <!-- СОЗДАНИЕ ТРАНЗАКЦИИ ИЗ БАНКА  -->
-    {% if user['bank_holder'] %}
-        <a href="#popup1" style="text-decoration: none; color: #ffffff;"><button class="create-transaction-button"> Создать транзакцию из банка</button></a>
-    {% endif %}
-
     <div class="lap-section">
+        {% if user['bank_holder'] %}
+        <a href="#popup1" class="bank-action">Перевод из банка</a>
+        {% endif %}
         <button type="button" id="requestLap" class="create-transaction-button" disabled>Пройден круг</button>
         <p id="lapStatus" role="status">Загрузка статуса…</p>
         {% if user['bank_holder'] %}
@@ -94,11 +93,11 @@
         {% endif %}
     </div>
 
-    <div id="popup1" class="popup-screen">
+    <div id="popup1" class="popup-screen" role="dialog" aria-modal="true" aria-labelledby="bankTransferTitle">
         <form method="post" id="bankTransactionForm">
-            <p class="popup-title">Создать транзакцию из банка</p>
+            <div class="popup-header"><h2 class="popup-title" id="bankTransferTitle">Перевод из банка</h2><a href="#" class="close" aria-label="Закрыть перевод из банка">&times;</a></div>
             <div class="popup-row">
-                <select id="receiverFromBankInput" name="receiver" class="popup-selecter">
+                <select id="receiverFromBankInput" aria-label="Получатель из банка" name="receiver" class="popup-selecter">
                     <option value="">Получатель</option>
                     {% for receiver in users %}
                         <option value="{{ receiver['name'] }}">{{ receiver['name'] }}</option>
@@ -112,16 +111,15 @@
                 {% endfor %}
             </div>
             <div class="popup-row">
-                <input type="text" placeholder="Комментарий" name="comment" id="commentFromBankInput" class="popup-comment">
-                <input type="submit" value="OK" class="popup-button">
+                <input type="text" placeholder="Комментарий (необязательно)" aria-label="Комментарий" name="comment" id="commentFromBankInput" class="popup-comment">
+                <input type="submit" value="Перевести" class="popup-button">
             </div>
         </form>
-        <a href="#" class="close">&times;</a>
     </div>
 
 
     <div class="transactions-wrapper">
-        <p class="transactions-title">История транзакций</p>
+        <p class="transactions-title">История операций</p>
         <div class="transaction-types">
             <button type="button" class="tr-bt my-transactions-button is-active" data-history="user_transactions" aria-controls="user_transactions" aria-pressed="true">Мои</button>
             <button type="button" class="tr-bt bank-transactions-button" data-history="bank_transactions" aria-controls="bank_transactions" aria-pressed="false">С банком</button>
@@ -166,7 +164,7 @@
             </div>
         </div>
     </div>
-        <a href="/signout" class="exit-link">Выйти</a><br>
+        <a href="/signout" class="exit-link">Выйти</a>
         </section>
     <script>
         let currentUser = {{ user['name'] | tojson }};
@@ -182,13 +180,17 @@
             selectHistory(document.querySelector('.my-transactions-button'));
 
             async function api(url, options) {
-                const response = await fetch(url, {cache: 'no-store', ...options});
+                let response;
+                try { response = await fetch(url, {cache: 'no-store', ...options}); }
+                catch (error) { error.connectionFailure = true; throw error; }
                 if (!response.ok) {
                     const error = new Error('HTTP ' + response.status);
                     error.status = response.status;
+                    error.connectionFailure = response.status >= 500;
                     throw error;
                 }
-                return response.json();
+                try { return await response.json(); }
+                catch (error) { error.connectionFailure = true; throw error; }
             }
 
             async function updateInfo(signal) {
@@ -248,7 +250,7 @@
 
 
     </script>
-    <script src="/static/transfers.js"></script>
-    <script src="/static/laps.js"></script>
+    <script src="/static/transfers.js?v=notifications-1"></script>
+    <script src="/static/laps.js?v=notifications-1"></script>
     </body>
 </html>

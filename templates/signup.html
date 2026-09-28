@@ -1,32 +1,51 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="/static/notifications.js"></script>
     <title>М-Банк | Вход</title>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <link rel="icon" href="/static/Assets/Icons/Favicon.svg" type="image/x-icon">
-    <link rel="stylesheet" href="/static/styles.css">
-    <link href="https://fonts.cdnfonts.com/css/sf-pro-display" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css?v=notifications-1">
                 
 </head>
-<body>
+<body class="login-page">
     <section class="main-container">
         <div class="main-logo-wrapper">
             <img src="/static/Assets/Icons/M-Bank_Logo.svg" alt="" class="main-logo">
         </div>
             <form method="post" class="form-wrapper">
+                <h1 class="login-title">Вход в игру</h1>
                 {% if error %}
                 <div class="login-error" role="alert">{{ error }}</div>
                 {% endif %}
-                <input type="text" name="username" autocomplete="username" placeholder="Ваше имя" class="reg-inputs" value="{{ request.form.get('username', '') }}" required>
-                <input type="password" name="secret_word" autocomplete="current-password" aria-label="Пароль" placeholder="Пароль" class="reg-inputs" required>
-                <p class="password-caption">При первом входе придумайте пароль.<br>В дальнейшем входите с тем же именем и паролем.</p>
+                <label for="loginName">Ваше имя</label>
+                <input id="loginName" type="text" name="username" autocomplete="username" placeholder="Ваше имя" class="reg-inputs" value="{{ request.form.get('username', '') }}" required>
+                <label for="loginPassword">Пароль</label>
+                <div class="password-field">
+                <input id="loginPassword" type="password" name="secret_word" autocomplete="current-password" aria-label="Пароль" placeholder="Пароль" class="reg-inputs" required>
+                <button type="button" id="togglePassword" aria-controls="loginPassword" aria-pressed="false">Показать</button>
+                </div>
+                <p class="password-caption">При первом входе придумайте пароль. В дальнейшем входите с тем же именем и паролем.</p>
                 <input type="submit" value="Войти" class="enter-button">
                 <a href="/info" class="information-link">Справка</a>
             </form>
             <div class="qr-code-wrapper">
-                <img src="{{ qrcode(base_url) }}">
+                <img src="{{ qrcode(base_url) }}" alt="QR-код для подключения к игре">
             </div>
+            <p class="qr-caption">Подключить другой телефон</p>
     </section>
+<script>
+    {% if error %}
+    notify({{ error | tojson }}, {type: 'error', id: 'login', duration: 7000});
+    {% endif %}
+    document.getElementById('togglePassword').addEventListener('click', function () {
+        const input = document.getElementById('loginPassword');
+        const visible = input.type === 'password';
+        input.type = visible ? 'text' : 'password';
+        this.textContent = visible ? 'Скрыть' : 'Показать';
+        this.setAttribute('aria-pressed', String(visible));
+    });
+</script>
 </body>
 </html>

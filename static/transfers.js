@@ -26,6 +26,7 @@ function syncPlayers(players) {
             card.append(button);
             list.append(card);
         }
+        button.title = player.name;
         button.querySelector('.player-list-name').textContent = player.name;
         button.querySelector('.player-balance').textContent = '$' + player.balance;
         const last = button.querySelector('.player-last-transaction');
@@ -45,7 +46,9 @@ function refreshAmounts() {
         const form = input.closest('form');
         const receiver = form.querySelector('[name="receiver"]').value;
         const busy = form.dataset.busy === 'true';
-        form.querySelector('[type="submit"]').disabled = busy || !receiver || Number(input.value) <= 0;
+        const submit = form.querySelector('[type="submit"]');
+        submit.disabled = busy || !receiver || Number(input.value) <= 0;
+        submit.value = busy ? 'Отправляем…' : Number(input.value) > 0 ? 'Перевести ' + input.value : 'Перевести';
         form.querySelectorAll('.amount-step').forEach(button => {
             const next = clampAmount(Number(input.value) + Number(button.dataset.step), maximum);
             button.disabled = busy || next === Number(input.value);
@@ -101,16 +104,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/create_transaction', {
                     method: 'POST', body: payload, signal: controller.signal
                 });
-                if (!response.ok) throw new Error('HTTP ' + response.status);
-                const result = await response.json();
-                if (result.result !== 'success') {
-                    alert(result.error || 'Перевод отклонён');
-                    return;
-                }
+                const result = await readActionResponse(response);
+                if (result.result !== 'success') throw new Error('Unknown outcome');
+                notifications.dismiss('action');
                 form.reset();
                 location.hash = '';
             } catch (error) {
-                alert('Не удалось получить ответ. Проверьте баланс и историю перед повтором: перевод мог уже пройти.');
+                notifyActionError(error, 'Перевод не выполнен', 'Не удалось узнать результат перевода. Проверьте баланс и историю перед повтором: деньги могли уже уйти.');
             } finally {
                 clearTimeout(timeout);
                 form.dataset.busy = 'false';
@@ -118,5 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && ['#popup', '#popup1'].includes(location.hash)) location.hash = '';
+    });
     refreshAmounts();
 });
