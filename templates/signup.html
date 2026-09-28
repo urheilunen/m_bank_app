@@ -16,11 +16,11 @@
         </div>
             <form method="post" class="form-wrapper">
                 {% if error %}
-                {{ error }}<br>
+                <div class="login-error" role="alert">{{ error }}</div>
                 {% endif %}
-                <input type="text" name="username" placeholder="Ваше имя" class="reg-inputs" required>
-                <input type="text" name="secret_word" placeholder="Секретное слово" class="reg-inputs" required>
-                <p class="secret-word-caption">Придумайте секретное слово,<br> если входите в М-Банк первый раз</p>
+                <input type="text" name="username" autocomplete="username" placeholder="Ваше имя" class="reg-inputs" value="{{ request.form.get('username', '') }}" required>
+                <input type="password" name="secret_word" autocomplete="current-password" aria-label="Пароль" placeholder="Пароль" class="reg-inputs" required>
+                <p class="password-caption">При первом входе придумайте пароль.<br>В дальнейшем входите с тем же именем и паролем.</p>
                 <input type="submit" value="Войти" class="enter-button">
                 <a href="/info" class="information-link">Справка</a>
             </form>

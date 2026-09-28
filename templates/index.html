@@ -81,7 +81,7 @@
     {% endif %}
 
     <div class="lap-section">
-        <button type="button" id="requestLap" class="create-transaction-button" disabled>Пройден круг · +200</button>
+        <button type="button" id="requestLap" class="create-transaction-button" disabled>Пройден круг</button>
         <p id="lapStatus" role="status">Загрузка статуса…</p>
         {% if user['bank_holder'] %}
         <button type="button" id="showLapRequests" hidden>Заявки на круг</button>
@@ -93,7 +93,7 @@
         </dialog>
         {% endif %}
     </div>
-    
+
     <div id="popup1" class="popup-screen">
         <form method="post" id="bankTransactionForm">
             <p class="popup-title">Создать транзакцию из банка</p>
@@ -123,14 +123,14 @@
     <div class="transactions-wrapper">
         <p class="transactions-title">История транзакций</p>
         <div class="transaction-types">
-            <button class="tr-bt my-transactions-button">Мои</button>
-            <button class="tr-bt bank-transactions-button">С банком</button>
-            <button class="tr-bt all-transactions-button">Все</button>
+            <button type="button" class="tr-bt my-transactions-button is-active" data-history="user_transactions" aria-controls="user_transactions" aria-pressed="true">Мои</button>
+            <button type="button" class="tr-bt bank-transactions-button" data-history="bank_transactions" aria-controls="bank_transactions" aria-pressed="false">С банком</button>
+            <button type="button" class="tr-bt all-transactions-button" data-history="all_transactions" aria-controls="all_transactions" aria-pressed="false">Все</button>
         </div>
         <div class="transactions-list">
             <div id="user_transactions" class="transactions-content">
                 {% for transaction in user_transactions %}
-                <div class="transaction-block" data-transaction-id="{{ transaction['pk'] }}">
+                <div class="transaction-block{% if transaction['sender'] == 'bank' %} bank-outgoing{% endif %}" data-transaction-id="{{ transaction['pk'] }}">
                     <p class="tr-caption tr-num">{{ transaction['pk'] }}</p>
                     <p class="tr-caption tr-time">{{ transaction['timestamp'] }}</p>
                     <div class="tr-caption operation-and-comment">
@@ -142,7 +142,7 @@
             </div>
             <div id="bank_transactions" class="transactions-content">
                 {% for transaction in bank_transactions %}
-                <div class="transaction-block" data-transaction-id="{{ transaction['pk'] }}">
+                <div class="transaction-block{% if transaction['sender'] == 'bank' %} bank-outgoing{% endif %}" data-transaction-id="{{ transaction['pk'] }}">
                     <p class="tr-caption tr-num">{{ transaction['pk'] }}</p>
                     <p class="tr-caption tr-time">{{ transaction['timestamp'] }}</p>
                     <div class="tr-caption operation-and-comment">
@@ -154,7 +154,7 @@
             </div>
             <div id="all_transactions" class="transactions-content">
                 {% for transaction in all_transactions %}
-                <div class="transaction-block" data-transaction-id="{{ transaction['pk'] }}">
+                <div class="transaction-block{% if transaction['sender'] == 'bank' %} bank-outgoing{% endif %}" data-transaction-id="{{ transaction['pk'] }}">
                     <p class="tr-caption tr-num">{{ transaction['pk'] }}</p>
                     <p class="tr-caption tr-time">{{ transaction['timestamp'] }}</p>
                     <div class="tr-caption operation-and-comment">
@@ -172,22 +172,14 @@
         let currentUser = {{ user['name'] | tojson }};
         let currentBalance = {{ user['balance'] | tojson }};
         $(document).ready(function () {
-            $('#user_transactions').show();
-
-            $('.my-transactions-button').click(function () {
+            function selectHistory(button) {
+                $('.tr-bt').removeClass('is-active').attr('aria-pressed', 'false');
+                $(button).addClass('is-active').attr('aria-pressed', 'true');
                 $('.transactions-content').hide();
-                $('#user_transactions').show();
-            });
-
-            $('.bank-transactions-button').click(function () {
-                $('.transactions-content').hide();
-                $('#bank_transactions').show();
-            });
-
-            $('.all-transactions-button').click(function () {
-                $('.transactions-content').hide();
-                $('#all_transactions').show();
-            });
+                $('#' + button.dataset.history).show();
+            }
+            $('.tr-bt').on('click', function () { selectHistory(this); });
+            selectHistory(document.querySelector('.my-transactions-button'));
 
             async function api(url, options) {
                 const response = await fetch(url, {cache: 'no-store', ...options});
@@ -228,6 +220,7 @@
                     }[transaction.notification_type];
                     if (target && !$(target).find('[data-transaction-id="' + transaction.transaction_pk + '"]').length) {
                         const block = $('<div>').addClass('transaction-block')
+                            .toggleClass('bank-outgoing', transaction.transaction_sender === 'bank')
                             .attr('data-transaction-id', transaction.transaction_pk);
                         $('<p>').addClass('tr-caption tr-num').text(transaction.transaction_pk).appendTo(block);
                         $('<p>').addClass('tr-caption tr-time').text(transaction.transaction_timestamp).appendTo(block);

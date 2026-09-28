@@ -37,6 +37,19 @@ body{
     justify-content: space-between;
     align-items: center;
 }
+.login-error {
+    box-sizing: border-box;
+    width: 600px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    border: 2px solid #ff7373;
+    border-radius: 15px;
+    background-color: #4a202b;
+    color: #fff;
+    font-size: 28pt;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
 .reg-inputs{
     width: 600px;
     height: 100px;
@@ -61,7 +74,7 @@ body{
     outline: 2px solid #304EE7;
     transition: 0.3s;
 }
-.secret-word-caption{
+.password-caption{
     color: #999999;
     font-size: 30pt;
     text-align: center;
@@ -330,7 +343,6 @@ body{
 }
 .transactions-wrapper {
     width: 850px;
-    max-height: 800px;
     background-color: #14142C;
     color: #CDCEE2;
     border-radius: 20px;
@@ -356,9 +368,10 @@ body{
     width: 250px;
     height: 100px;
     border-radius: 10px;
-    background-color: #304EE7;
-    color: #fff;
-    border: none;
+    background-color: #222440;
+    color: #CDCEE2;
+    border: 2px solid transparent;
+    box-sizing: border-box;
     font-size: 32pt;
     font-weight: 500;
     text-align: center;
@@ -370,25 +383,35 @@ body{
     align-items: center;
 }
 
-.tr-bt:active {
-    background-color: #14142C;
-    border: 2px solid #304EE7;
+.tr-bt:hover:not(.is-active) {
+    background-color: #303454;
+}
+.tr-bt.is-active {
+    background-color: #304EE7;
+    color: #fff;
+    border-color: #8ba1ff;
+    box-shadow: inset 0 -5px 0 #b5c2ff;
+}
+.tr-bt:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 4px;
 }
 
 .transactions-list {
-    width: fit-content;
-    max-height: 500px;
-    overflow: scroll;
+    width: 830px;
     margin-bottom: 20px;
 }
 
 .transaction-block {
     background-color: #000220;
-    width: 790px;
-    height: 100px;
-    padding-left: 20px;
-    padding-right: 20px;
-    display: flex;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 100px;
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
     border-radius: 10px;
     justify-content: flex-start;
     margin-bottom: 10px;
@@ -396,8 +419,8 @@ body{
 
 .tr-caption {
     font-size: 28pt;
-    margin-right: 40px;
-    line-height: 20px;
+    margin: 0;
+    line-height: 1.3;
 }
 .tr-operation{
     font-weight: 500;
@@ -408,16 +431,14 @@ body{
     line-height: normal;
     margin-top: 0;
     margin-bottom: 0;
-    overflow: scroll;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
 }
 .operation-and-comment{
-    width: fit-content;
-    margin-top: 10px;
-    margin-bottom: 10px;
-    height: 70px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    gap: 6px;
 }
 .transactions-content {
     display: none;
@@ -478,3 +499,12 @@ body{
 #lapDialog .rejected { background: #943737; }
 #lapDialog button:disabled { opacity: .5; cursor: default; }
 #lapDecisionStatus { font-size: 23pt; }
+
+/* Bank payouts stay conspicuous in every history view. */
+.transaction-block.bank-outgoing {
+    background-color: #351d2b;
+    box-shadow: inset 5px 0 0 #f16f7c;
+}
+.bank-outgoing .tr-operation {
+    color: #ff9ba5;
+}

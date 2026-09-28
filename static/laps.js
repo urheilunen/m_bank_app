@@ -20,7 +20,7 @@ function renderLapState(state) {
     const requestButton = document.getElementById('requestLap');
     const waiting = Boolean(ownLap && ownLap.status === 'pending');
     requestButton.disabled = requestingLap || waiting;
-    requestButton.textContent = requestingLap ? 'Отправляем заявку…' : waiting ? 'Ожидаем банкира…' : 'Пройден круг · +200';
+    requestButton.textContent = requestingLap ? 'Отправляем заявку…' : waiting ? 'Ожидаем банкира…' : 'Пройден круг';
     document.getElementById('lapStatus').textContent = lapError || (waiting
         ? 'Заявка отправлена. 200 будут начислены после подтверждения банкиром.'
         : ownLap && ownLap.status === 'approved' ? 'Круг подтверждён: начислено 200. Следующее нажатие — заявка на новый круг.'
@@ -44,7 +44,7 @@ function renderLapState(state) {
             const text = document.createElement('p');
             text.textContent = 'Подтвердите: игрок ' + item.username + ' прошёл круг.';
             card.append(text);
-            for (const [decision, label] of [['approved', 'Подтвердить · +200'], ['rejected', 'Отклонить']]) {
+            for (const [decision, label] of [['approved', 'Подтвердить'], ['rejected', 'Отклонить']]) {
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.textContent = label;

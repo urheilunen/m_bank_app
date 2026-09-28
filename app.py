@@ -99,15 +99,15 @@ def signup():
             secret_word = request.form['secret_word']
             user = query_get_from_db("SELECT * FROM users WHERE name=?", (username,))
             if user:
-                # юзер найден, сверить секретное слово
+                # Пользователь найден, проверить пароль
                 user = user[0]
                 if user['secret_word'] == secret_word:
-                    # секретное слово сходится, начать сессию и перейти на индекс
+                    # Пароль верный, начать сессию и перейти на главную
                     session['username'] = username
                     return redirect(url_for('index'))
                 else:
-                    # секретное слово не сошлось, спросить снова
-                    return render_template('signup.html', error="Пользователь найден, но неправильное секретное слово", base_url=base_url)
+                    # Пароль неверный, предложить повторный ввод
+                    return render_template('signup.html', error="Неверный пароль. Попробуйте ещё раз.", base_url=base_url)
             else:
                 # юзер не найден, создать и перенаправить на индекс
                 users_amount = len(query_get_from_db('SELECT * FROM users'))
